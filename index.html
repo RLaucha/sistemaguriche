@@ -35,32 +35,7 @@ a{color:inherit}
   --shadow-lg:0 12px 40px -12px rgba(36,31,27,.32), inset 1px 1px 0px rgba(255,255,255,0.4);
   --radius:16px;
   --radius-sm:9px;
-  --maxw:1060px;
-}
-@media (prefers-color-scheme:dark){
-  :root:not([data-theme="light"]){
-    --bg:#1A1513;
-    --surface:#241F1B;
-    --surface-2:#2E2722;
-    --surface-3:#38302A;
-    --ink:#EFE6D3;
-    --muted:#B0A298;
-    --faint:#8A7D73;
-    --border:#3D332B;
-    --border-strong:#4F4238;
-    --accent:#D4845A;
-    --accent-ink:#1A1513;
-    --accent-soft:#3A2A20;
-    --accent-hover:#E09B73;
-
-    --slate:#A8B4C0;   --slate-bg:#2B3138;
-    --amber:#E6AD5E;   --amber-bg:#3A2E1C;
-    --blue:#60A5FA;    --blue-bg:#1E3A5F;
-    --green:#4ADE80;   --green-bg:#183227;
-
-    --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 18px -8px rgba(0,0,0,.5), inset 1px 1px 0px rgba(255,255,255,0.05);
-    --shadow-lg:0 16px 44px -12px rgba(0,0,0,.6), inset 1px 1px 0px rgba(255,255,255,0.05);
-  }
+  --maxw:1300px;
 }
 :root[data-theme="dark"]{
   --bg:#1A1513;
@@ -94,37 +69,40 @@ body{
 #app-root{display:block}
 
 /* ---------- layout ---------- */
-.shell{max-width:var(--maxw);margin:0 auto;min-height:100vh}
+.shell{width:100%;min-height:100vh;margin:0}
 @media (min-width:860px){
-  .shell{display:grid;grid-template-columns:236px 1fr;gap:0}
+  .shell{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
 }
-.main{padding:18px 16px 96px}
-@media (min-width:860px){.main{padding:30px 34px 40px}}
+.main{padding:18px 16px 96px;width:100%;box-sizing:border-box}
+@media (min-width:860px){
+  .main{padding:36px 48px 60px;max-width:1300px}
+}
 
 /* ---------- sidebar / topbar ---------- */
-.brand{display:flex;align-items:center;gap:11px}
+.brand{display:flex;align-items:center;gap:12px}
 .brand-mark{
-  width:38px;height:38px;border-radius:11px;flex:none;
+  width:40px;height:40px;border-radius:12px;flex:none;
   background:var(--accent);color:var(--accent-ink);
-  display:grid;place-items:center;font-family:'Lora', Georgia, serif;font-weight:700;font-size:21px;
+  display:grid;place-items:center;font-family:'Lora', Georgia, serif;font-weight:700;font-size:22px;
   box-shadow:var(--shadow);
   animation: pulse-glow 3s infinite alternate;
 }
-.brand-name{font-family:'Lora', Georgia, serif;font-weight:600;font-size:20px;letter-spacing:-.01em;line-height:1}
+.brand-name{font-family:'Lora', Georgia, serif;font-weight:600;font-size:21px;letter-spacing:-.01em;line-height:1}
 .brand-sub{font-size:11.5px;color:var(--faint);letter-spacing:.04em;text-transform:uppercase;margin-top:3px}
 
 .sidebar{display:none}
 @media (min-width:860px){
   .sidebar{
     display:flex;flex-direction:column;gap:6px;
-    padding:26px 16px;border-right:1px solid var(--border);
+    padding:28px 18px;border-right:1px solid var(--border);
     position:sticky;top:0;height:100vh;
     background: linear-gradient(180deg, var(--surface-2) 0%, var(--bg) 100%);
+    width:260px;box-sizing:border-box;
   }
-  .sidebar .brand{padding:0 8px 22px}
+  .sidebar .brand{padding:0 8px 24px}
   .nav-link{
     display:flex;align-items:center;gap:12px;
-    padding:10px 12px;border-radius:10px;color:var(--muted);
+    padding:11px 14px;border-radius:11px;color:var(--muted);
     font-weight:500;font-size:14.5px;transition:all 0.2s ease;
   }
   .nav-link svg{width:19px;height:19px;flex:none}
@@ -133,7 +111,7 @@ body{
   .nav-badge{margin-left:auto;font-size:11.5px;font-weight:600;background:var(--surface-3);color:var(--muted);
     padding:1px 8px;border-radius:20px;font-variant-numeric:tabular-nums}
   .nav-link.active .nav-badge{background:var(--accent);color:var(--accent-ink)}
-  .sidebar-foot{margin-top:auto;padding:12px 8px 0;border-top:1px solid var(--border)}
+  .sidebar-foot{margin-top:auto;padding:14px 8px 0;border-top:1px solid var(--border)}
 }
 
 /* mobile top bar */
@@ -387,8 +365,9 @@ textarea.input{resize:vertical;min-height:64px;font-family:inherit}
 .asignado-tag.lauti{color:var(--green);background:var(--green-bg)}
 
 /* ---------- catálogo ---------- */
-.cat-grid{display:grid;gap:10px}
+.cat-grid{display:grid;gap:14px}
 @media(min-width:640px){.cat-grid{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1150px){.cat-grid{grid-template-columns:repeat(3,1fr)}}
 .cat-item .cat-marca{font-size:12px;color:var(--faint);font-weight:500;text-transform:uppercase;letter-spacing:.03em}
 .cat-item .cat-precios{display:flex;gap:10px;align-items:baseline;margin-top:4px}
 .dispo-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle}
@@ -562,7 +541,9 @@ textarea.input{resize:vertical;min-height:64px;font-family:inherit}
       catalogo:'<path d="M4 19.5A2.5 2.5 0 016.5 17H20M4 19.5A2.5 2.5 0 014 17V5a2 2 0 012-2h12a2 2 0 012 2v14H6.5"/><path d="M8 7h8M8 11h6"/>',
       phone:'<path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>',
       whatsapp:'<path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>',
-      more:'<circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="19" r="1.5"/>'
+      more:'<circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="19" r="1.5"/>',
+      sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
+      moon:'<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>'
     };
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+(p[n]||"")+'</svg>';
   }
@@ -597,6 +578,9 @@ textarea.input{resize:vertical;min-height:64px;font-family:inherit}
   }
 
   function sidebar(){
+    var theme = document.documentElement.getAttribute("data-theme") || "light";
+    var themeIcon = theme === "dark" ? "sun" : "moon";
+    var themeTitle = theme === "dark" ? "Cambiar a Modo Crema (Claro)" : "Cambiar a Modo Oscuro";
     var links=NAV.map(function(n){
       var b=navBadge(n[0]);
       return '<button class="nav-link'+(ui.view===n[0]?" active":"")+'" data-act="nav" data-view="'+n[0]+'">'
@@ -611,8 +595,11 @@ textarea.input{resize:vertical;min-height:64px;font-family:inherit}
       + brand()
       + '<nav style="display:flex;flex-direction:column;gap:4px">'+links+'<div class="nav-divider"></div>'+moreLinks+'</nav>'
       + '<div class="sidebar-foot">'
-      +   '<button class="nav-link" data-act="settings">'+ic("edit")+'<span>Ajustes</span></button>'
-      +   '<div id="save-hint" style="font-size:11px;color:var(--faint);padding:8px 12px 0"></div>'
+      +   '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px">'
+      +     '<button class="nav-link" style="flex:1" data-act="settings">'+ic("edit")+'<span>Ajustes</span></button>'
+      +     '<button class="btn btn--ghost btn--sm" data-act="theme:toggle" title="'+themeTitle+'" aria-label="'+themeTitle+'">'+ic(themeIcon)+'</button>'
+      +   '</div>'
+      +   '<div id="save-hint" style="font-size:11px;color:var(--faint);padding:6px 12px 0"></div>'
       + '</div>'
       + '</aside>';
   }
@@ -622,8 +609,13 @@ textarea.input{resize:vertical;min-height:64px;font-family:inherit}
       +'<div class="brand-sub">Perfumería · por encargo</div></div></div>';
   }
   function topbar(){
+    var theme = document.documentElement.getAttribute("data-theme") || "light";
+    var themeIcon = theme === "dark" ? "sun" : "moon";
     return '<div class="topbar">'+brand()
-      +'<button class="btn btn--ghost" data-act="settings" aria-label="Ajustes">'+ic("edit")+'</button></div>';
+      +'<div style="display:flex;gap:4px">'
+      +'<button class="btn btn--ghost btn--sm" data-act="theme:toggle" aria-label="Cambiar tema">'+ic(themeIcon)+'</button>'
+      +'<button class="btn btn--ghost btn--sm" data-act="settings" aria-label="Ajustes">'+ic("edit")+'</button>'
+      +'</div></div>';
   }
   function tabbar(){
     var isMore = ui.view==="catalogo"||ui.view==="tareas";
@@ -1411,6 +1403,14 @@ textarea.input{resize:vertical;min-height:64px;font-family:inherit}
     switch(act){
       case "nav": ui.view=t.getAttribute("data-view"); ui.showMore=false; ui.q=""; ui.filter="todos"; render(); window.scrollTo(0,0); break;
       case "more:toggle": ui.showMore=!ui.showMore; render(); break;
+      case "theme:toggle": {
+        var cur = document.documentElement.getAttribute("data-theme") || "light";
+        var next = cur === "dark" ? "light" : "dark";
+        document.documentElement.setAttribute("data-theme", next);
+        lsSet("theme", next);
+        render();
+        showToast(next==="dark" ? "Modo oscuro activado" : "Modo Crema activado");
+      } break;
       case "settings": openModal("settings",{}); break;
       case "modal:close": case "overlay":
         if(act==="overlay" && ev.target!==t) return;
@@ -1588,6 +1588,8 @@ textarea.input{resize:vertical;min-height:64px;font-family:inherit}
   }
 
   /* ============ init ============ */
+  var initialTheme = lsGet("theme", "light");
+  document.documentElement.setAttribute("data-theme", initialTheme);
   ensureApi().then(function(a){
     // Si estamos en un viewer que otorga artifact pero la vista es de solo lectura,
     // lo detectamos recién al primer publish. No forzamos nada acá.
