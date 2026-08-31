@@ -467,7 +467,93 @@ textarea.input{resize:vertical;min-height:64px;font-family:inherit}
     return s;
   }
 
-  /* ============ persistencia (Artifact) ============ */
+  /* ============ sincronización Google Sheets ============ */
+  var isSyncing = false;
+  function getSheetsUrl(){
+    return (state.config.sheetsUrl || lsGet("sheetsUrl", "") || "").trim();
+  }
+
+  function syncWithSheets(direction, silent){
+    var url = getSheetsUrl();
+    if(!url){
+      if(!silent) showToast("Configurá la URL de Google Sheets en Ajustes");
+      return Promise.resolve(false);
+    }
+    isSyncing = true;
+    updateSaveHint();
+    if(!silent) showToast(direction === "pull" ? "Descargando de Google Sheets…" : "Guardando en Google Sheets…");
+
+    if(direction === "pull"){
+      return fetch(url + (url.indexOf("?") >= 0 ? "&" : "?") + "action=get_all")
+        .then(function(res){ return res.json(); })
+        .then(function(data){
+          isSyncing = false;
+          updateSaveHint();
+          if(data && !data.error){
+            if(data.catalogo && Array.isArray(data.catalogo)) state.catalogo = data.catalogo;
+            if(data.clientes && Array.isArray(data.clientes)) state.clientes = data.clientes;
+            if(data.pedidos && Array.isArray(data.pedidos)) state.pedidos = data.pedidos;
+            if(data.tareas && Array.isArray(data.tareas)) state.tareas = data.tareas;
+            if(data.encargos && Array.isArray(data.encargos)) state.encargos = data.encargos;
+            if(data.config && typeof data.config === "object"){
+              if(data.config.negocio) state.config.negocio = data.config.negocio;
+              if(data.config.moneda) state.config.moneda = data.config.moneda;
+              if(data.config.minEncargo) state.config.minEncargo = data.config.minEncargo;
+            }
+            render();
+            lsSet("state_backup", JSON.stringify(state));
+            if(!silent) showToast("¡Sincronizado con Google Sheets! ☁️");
+            return true;
+          } else {
+            if(!silent) showToast("Error de Sheets: " + (data.error || "Respuesta inválida"));
+            return false;
+          }
+        })
+        .catch(function(err){
+          isSyncing = false;
+          updateSaveHint();
+          if(!silent) showToast("No se pudo conectar con Google Sheets");
+          return false;
+        });
+    } else {
+      var payload = {
+        action: "sync_all",
+        data: {
+          config: state.config,
+          catalogo: state.catalogo,
+          clientes: state.clientes,
+          pedidos: state.pedidos,
+          tareas: state.tareas,
+          encargos: state.encargos
+        }
+      };
+      return fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      })
+      .then(function(res){ return res.json(); })
+      .then(function(res){
+        isSyncing = false;
+        updateSaveHint();
+        if(res && res.ok){
+          if(!silent) showToast("¡Guardado en la nube! ☁️");
+          return true;
+        } else {
+          if(!silent) showToast("Error al guardar en Sheets: " + (res.error || ""));
+          return false;
+        }
+      })
+      .catch(function(err){
+        isSyncing = false;
+        updateSaveHint();
+        if(!silent) showToast("Error al enviar a Google Sheets");
+        return false;
+      });
+    }
+  }
+
+  /* ============ persistencia (Artifact & Local) ============ */
   var HEAD = ""; // se calcula en buildDoc
   function buildDoc(st){
     var styleEl = document.getElementById("app-style");
@@ -495,20 +581,18 @@ textarea.input{resize:vertical;min-height:64px;font-family:inherit}
 
   function persist(msg){
     render();
+    lsSet("state_backup", JSON.stringify(state));
+    var url = getSheetsUrl();
+    if(url && !readOnly){
+      syncWithSheets("push", true);
+    }
     if(readOnly) return;
     ui.saving=true; updateSaveHint();
     ensureApi().then(function(api){
-      if(!api){ ui.saving=false; showToast("Guardado local (sin sincronizar)"); updateSaveHint(); return; }
+      if(!api){ ui.saving=false; updateSaveHint(); return; }
       return api.publish(buildDoc(state)).then(function(){
-        // la vista se recarga sola con la versión nueva
       }).catch(function(e){
         ui.saving=false;
-        var code=e&&e.code;
-        if(code==="conflict"){ /* recarga automática */ return; }
-        if(code==="not_writer"||code==="not_granted"||code==="not_declared"||code==="consent_required"){
-          readOnly=true; showToast("Modo solo lectura"); render(); return;
-        }
-        showToast("No se pudo sincronizar ("+(code||"error")+")");
         updateSaveHint();
       });
     });
@@ -516,7 +600,14 @@ textarea.input{resize:vertical;min-height:64px;font-family:inherit}
 
   function updateSaveHint(){
     var h=document.getElementById("save-hint");
-    if(h) h.textContent = ui.saving ? "Guardando…" : "";
+    if(h){
+      if(isSyncing) h.textContent = "Sincronizando ☁️…";
+      else if(ui.saving) h.textContent = "Guardando…";
+      else {
+        var url = getSheetsUrl();
+        h.textContent = url ? "Conectado a Sheets ☁️" : "Modo local";
+      }
+    }
   }
 
   /* ============ iconos ============ */
@@ -543,7 +634,9 @@ textarea.input{resize:vertical;min-height:64px;font-family:inherit}
       whatsapp:'<path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>',
       more:'<circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="19" r="1.5"/>',
       sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>',
-      moon:'<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>'
+      moon:'<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>',
+      sync:'<path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.2"/>',
+      cloud:'<path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/>'
     };
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+(p[n]||"")+'</svg>';
   }
@@ -581,6 +674,7 @@ textarea.input{resize:vertical;min-height:64px;font-family:inherit}
     var theme = document.documentElement.getAttribute("data-theme") || "light";
     var themeIcon = theme === "dark" ? "sun" : "moon";
     var themeTitle = theme === "dark" ? "Cambiar a Modo Crema (Claro)" : "Cambiar a Modo Oscuro";
+    var hasSheets = Boolean(getSheetsUrl());
     var links=NAV.map(function(n){
       var b=navBadge(n[0]);
       return '<button class="nav-link'+(ui.view===n[0]?" active":"")+'" data-act="nav" data-view="'+n[0]+'">'
@@ -594,6 +688,7 @@ textarea.input{resize:vertical;min-height:64px;font-family:inherit}
     return '<aside class="sidebar">'
       + brand()
       + '<nav style="display:flex;flex-direction:column;gap:4px">'+links+'<div class="nav-divider"></div>'+moreLinks+'</nav>'
+      + (hasSheets ? '<div style="padding:10px 4px 0"><button class="btn btn--ghost btn--sm" style="width:100%;justify-content:center;font-size:12.5px" data-act="sheets:pull">'+ic("sync")+' Sincronizar Sheets</button></div>' : '')
       + '<div class="sidebar-foot">'
       +   '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px">'
       +     '<button class="nav-link" style="flex:1" data-act="settings">'+ic("edit")+'<span>Ajustes</span></button>'
@@ -611,8 +706,10 @@ textarea.input{resize:vertical;min-height:64px;font-family:inherit}
   function topbar(){
     var theme = document.documentElement.getAttribute("data-theme") || "light";
     var themeIcon = theme === "dark" ? "sun" : "moon";
+    var hasSheets = Boolean(getSheetsUrl());
     return '<div class="topbar">'+brand()
       +'<div style="display:flex;gap:4px">'
+      +(hasSheets ? '<button class="btn btn--ghost btn--sm" data-act="sheets:pull" title="Sincronizar Sheets">'+ic("sync")+'</button>' : '')
       +'<button class="btn btn--ghost btn--sm" data-act="theme:toggle" aria-label="Cambiar tema">'+ic(themeIcon)+'</button>'
       +'<button class="btn btn--ghost btn--sm" data-act="settings" aria-label="Ajustes">'+ic("edit")+'</button>'
       +'</div></div>';
@@ -1221,14 +1318,30 @@ textarea.input{resize:vertical;min-height:64px;font-family:inherit}
       +'<div class="check-list">'+rows+'</div>'+foot("Guardar selección");
   }
   function formSettings(){
+    var sheetsUrl = getSheetsUrl();
+    var isConnected = Boolean(sheetsUrl);
+    var statusBadge = isConnected 
+      ? '<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--green);font-weight:600"><span style="width:8px;height:8px;border-radius:50%;background:var(--green)"></span> Conectado</span>'
+      : '<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)"><span style="width:8px;height:8px;border-radius:50%;background:var(--slate)"></span> Modo Local</span>';
+
     return fld("Nombre del negocio", '<input class="input" name="negocio" value="'+esc(state.config.negocio||"Guriche")+'" autocomplete="off">')
       + '<div class="field-row">'
       +   fld("Símbolo de moneda", '<input class="input" name="moneda" value="'+esc(state.config.moneda||"$")+'" maxlength="4">')
       +   fld("Mínimo por encargo", '<input class="input" name="minEncargo" type="number" min="1" step="1" value="'+(state.config.minEncargo||MIN_DEFAULT)+'">')
       + '</div>'
+      + '<div class="nav-divider" style="margin:22px 0 16px"></div>'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
+      +   '<span style="font-weight:600;font-size:14px">Conexión con Google Sheets ☁️</span>'
+      +   statusBadge
+      + '</div>'
+      + fld("URL de Google Apps Script (Web App)", '<input class="input" name="sheetsUrl" placeholder="https://script.google.com/macros/s/.../exec" value="'+esc(sheetsUrl)+'" autocomplete="off">', true)
+      + '<p class="help" style="margin-top:-6px;margin-bottom:14px">Pegá el link de tu Aplicación Web de Google Sheets para sincronizar en tiempo real con Juano.</p>'
+      + (isConnected ? '<div style="display:flex;gap:8px;margin-bottom:18px">'
+          + '<button type="button" class="btn btn--sm" data-act="sheets:pull">'+ic("sync")+' Traer de Sheets</button>'
+          + '<button type="button" class="btn btn--sm btn--primary" data-act="sheets:push">'+ic("check")+' Subir a Sheets</button>'
+          + '</div>' : '')
       + '<div class="modal-foot"><button type="submit" class="btn btn--primary">Guardar ajustes</button></div>'
-      + '<p class="foot-note" style="text-align:left;margin-top:24px">Compartí este mismo link con tu socio para que vean y editen lo mismo desde cualquier equipo o teléfono.</p>'
-      + '<div class="item-actions" style="justify-content:center;margin-top:8px">'
+      + '<div class="item-actions" style="justify-content:center;margin-top:20px">'
       +   (state.pedidos.length? '<button type="button" class="btn btn--sm btn--danger" data-act="wipe">'+ic("trash")+'Borrar todos los datos</button>'
             : '<button type="button" class="btn btn--sm" data-act="seed">'+ic("spark")+'Cargar datos de ejemplo</button>')
       + '</div>';
@@ -1383,7 +1496,17 @@ textarea.input{resize:vertical;min-height:64px;font-family:inherit}
     state.config.negocio=(d.negocio||"Guriche").trim()||"Guriche";
     state.config.moneda=(d.moneda||"$").trim()||"$";
     state.config.minEncargo=Math.max(1,parseInt(d.minEncargo,10)||MIN_DEFAULT);
-    ui.modal=null; persist();
+    var url = (d.sheetsUrl||"").trim();
+    state.config.sheetsUrl = url;
+    lsSet("sheetsUrl", url);
+    ui.modal=null;
+    persist();
+    if(url){
+      showToast("Conectando con Google Sheets…");
+      syncWithSheets("push", false);
+    } else {
+      showToast("Ajustes guardados");
+    }
   }
 
   /* ============ manejo de eventos ============ */
@@ -1403,6 +1526,8 @@ textarea.input{resize:vertical;min-height:64px;font-family:inherit}
     switch(act){
       case "nav": ui.view=t.getAttribute("data-view"); ui.showMore=false; ui.q=""; ui.filter="todos"; render(); window.scrollTo(0,0); break;
       case "more:toggle": ui.showMore=!ui.showMore; render(); break;
+      case "sheets:pull": syncWithSheets("pull", false); break;
+      case "sheets:push": syncWithSheets("push", false); break;
       case "theme:toggle": {
         var cur = document.documentElement.getAttribute("data-theme") || "light";
         var next = cur === "dark" ? "light" : "dark";
@@ -1595,6 +1720,9 @@ textarea.input{resize:vertical;min-height:64px;font-family:inherit}
     // lo detectamos recién al primer publish. No forzamos nada acá.
   });
   render();
+  if(getSheetsUrl()){
+    syncWithSheets("pull", true);
+  }
   window.addEventListener("keydown",function(e){ if(e.key==="Escape" && ui.modal){ closeModal(); } });
 })();
 </script>
