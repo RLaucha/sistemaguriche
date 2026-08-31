@@ -479,16 +479,22 @@ textarea.input{resize:vertical;min-height:64px;font-family:inherit}
       if(!silent) showToast("Configurá la URL de Google Sheets en Ajustes");
       return Promise.resolve(false);
     }
+    if(url.indexOf("/edit") >= 0){
+      if(!silent) showToast("⚠️ Pegaste la URL del editor. Debes usar la que termina en /exec");
+      return Promise.resolve(false);
+    }
     isSyncing = true;
     updateSaveHint();
     if(!silent) showToast(direction === "pull" ? "Descargando de Google Sheets…" : "Guardando en Google Sheets…");
 
     if(direction === "pull"){
       return fetch(url + (url.indexOf("?") >= 0 ? "&" : "?") + "action=get_all")
-        .then(function(res){ return res.json(); })
-        .then(function(data){
+        .then(function(res){ return res.text(); })
+        .then(function(text){
           isSyncing = false;
           updateSaveHint();
+          var data;
+          try { data = JSON.parse(text); } catch(e){ data = null; }
           if(data && !data.error){
             if(data.catalogo && Array.isArray(data.catalogo)) state.catalogo = data.catalogo;
             if(data.clientes && Array.isArray(data.clientes)) state.clientes = data.clientes;
@@ -505,7 +511,11 @@ textarea.input{resize:vertical;min-height:64px;font-family:inherit}
             if(!silent) showToast("¡Sincronizado con Google Sheets! ☁️");
             return true;
           } else {
-            if(!silent) showToast("Error de Sheets: " + (data.error || "Respuesta inválida"));
+            if(text && text.indexOf("<html") >= 0){
+              if(!silent) showToast("⚠️ Permiso en Apps Script: Poné 'Quién tiene acceso: Cualquier usuario'");
+            } else {
+              if(!silent) showToast("Error de Sheets: " + ((data && data.error) || "Respuesta no válida"));
+            }
             return false;
           }
         })
@@ -529,18 +539,26 @@ textarea.input{resize:vertical;min-height:64px;font-family:inherit}
       };
       return fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify(payload)
       })
-      .then(function(res){ return res.json(); })
-      .then(function(res){
+      .then(function(res){ return res.text(); })
+      .then(function(text){
         isSyncing = false;
         updateSaveHint();
+        var res;
+        try { res = JSON.parse(text); } catch(e){ res = null; }
         if(res && res.ok){
           if(!silent) showToast("¡Guardado en la nube! ☁️");
           return true;
+        } else if(res && res.error){
+          if(!silent) showToast("Error de Sheets: " + res.error);
+          return false;
         } else {
-          if(!silent) showToast("Error al guardar en Sheets: " + (res.error || ""));
+          if(text && text.indexOf("<html") >= 0){
+            if(!silent) showToast("⚠️ Permiso en Apps Script: Poné 'Quién tiene acceso: Cualquier usuario'");
+          } else {
+            if(!silent) showToast("Respuesta inválida de Google Sheets");
+          }
           return false;
         }
       })
